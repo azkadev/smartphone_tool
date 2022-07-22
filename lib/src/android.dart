@@ -4,6 +4,7 @@ import 'dart:io';
 class Adb {
   late String pathAdb;
   Adb(this.pathAdb);
+
   Future<ProcessResult> exec(
     List<String> commands, {
     String? deviceId,
@@ -26,8 +27,41 @@ class Adb {
     );
   }
 
+  ProcessResult execSync(
+    List<String> commands, {
+    String? deviceId,
+    String? workingDirectory,
+    Map<String, String>? environment,
+    bool includeParentEnvironment = true,
+    bool runInShell = false,
+    Encoding? stdoutEncoding = systemEncoding,
+    Encoding? stderrEncoding = systemEncoding,
+  }) {
+    return Process.runSync(
+      pathAdb,
+      (deviceId is String && deviceId.isNotEmpty) ? ["-s", deviceId, ...commands] : commands,
+      workingDirectory: workingDirectory,
+      environment: environment,
+      includeParentEnvironment: includeParentEnvironment,
+      runInShell: runInShell,
+      stderrEncoding: stderrEncoding,
+      stdoutEncoding: stdoutEncoding,
+    );
+  }
+
+  setProp(String prop, String newProp, {String? deviceId}) async {
+    var res = await exec(['shell', 'setprop', prop, newProp], deviceId: deviceId);
+    return res.stdout;
+  }
+
+
   getProp(String prop, {String? deviceId}) async {
     var res = await exec(['shell', 'getprop', prop], deviceId: deviceId);
+    return res.stdout;
+  }
+
+  getPropSync(String prop, {String? deviceId}) {
+    var res = execSync(['shell', 'getprop', prop], deviceId: deviceId);
     return res.stdout;
   }
 
@@ -59,6 +93,29 @@ class Adb {
         var device = deviceLine[0];
         var brand = await getProp("ro.product.brand", deviceId: device);
         var model = await getProp("ro.product.model", deviceId: device);
+        devicesList.add({"device_id": device, "brand": brand, "model": model});
+      }
+    }
+    return devicesList;
+  }
+  devicesSync({
+    String? deviceId,
+  }) {
+    var result = execSync(["devices"], deviceId: deviceId);
+    var res = LineSplitter.split(result.stdout);
+    List<Map> devicesList = [];
+    for (var value in res) {
+      if (value.contains("List of devices attached")) {
+        continue;
+      }
+      if (value.contains("device")) {
+        var deviceLine = value.split("\t");
+        if (deviceLine.isEmpty) {
+          continue;
+        }
+        var device = deviceLine[0];
+        var brand = getPropSync("ro.product.brand", deviceId: device);
+        var model = getPropSync("ro.product.model", deviceId: device);
         devicesList.add({"device_id": device, "brand": brand, "model": model});
       }
     }
