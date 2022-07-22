@@ -54,7 +54,6 @@ class Adb {
     return res.stdout;
   }
 
-
   getProp(String prop, {String? deviceId}) async {
     var res = await exec(['shell', 'getprop', prop], deviceId: deviceId);
     return res.stdout;
@@ -98,6 +97,7 @@ class Adb {
     }
     return devicesList;
   }
+
   devicesSync({
     String? deviceId,
   }) {
@@ -122,11 +122,11 @@ class Adb {
     return devicesList;
   }
 
-  Future<List<String>> ls(
+  List<String> lsSync(
     String pathFolder, {
     String? deviceId,
-  }) async {
-    var result = await exec(["shell", "ls", "-F", pathFolder], deviceId: deviceId);
+  }) {
+    var result = execSync(["shell", "ls", "-F", pathFolder], deviceId: deviceId);
     var paths = result.stdout.toString().split("\n").toList();
     List<String> array = [];
     for (var i = 0; i < paths.length; i++) {
@@ -141,6 +141,31 @@ class Adb {
       }
     }
     return array;
+  }
+
+  Future<List<String>> ls(
+    String pathFolder, {
+    String? deviceId,
+  }) async {
+    try {
+      var result = await exec(["shell", "ls", "-F", pathFolder], deviceId: deviceId);
+      var paths = result.stdout.toString().split("\n").toList();
+      List<String> array = [];
+      for (var i = 0; i < paths.length; i++) {
+        // ignore: non_constant_identifier_names
+        var loop_data = paths[i];
+        if (loop_data.isNotEmpty) {
+          if (loop_data.startsWith("/")) {
+            array.add(loop_data);
+          } else {
+            array.add("/${loop_data.toString()}");
+          }
+        }
+      }
+      return array;
+    } catch (e) {
+      return Future.error(e);
+    }
   }
 
   Future<Map<String, dynamic>> request(String method, {Map? parameters, String? deviceId}) async {
