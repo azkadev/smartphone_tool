@@ -85,4 +85,24 @@ class Adb {
     }
     return array;
   }
+
+  Future<Map<String, dynamic>> request(String method, {Map? parameters, String? deviceId}) async {
+    parameters ??= {};
+    Map<String, dynamic> jsonResult = {
+      "ok": false,
+      "result": {},
+    };
+    late bool isFoundMethod = false;
+    if (RegExp(r"getProp", caseSensitive: false).hasMatch(method)) {
+      var prop = await getProp(parameters["prop"], deviceId: deviceId);
+      isFoundMethod = true;
+      jsonResult["result"]["prop"] = prop;
+    }
+    if (isFoundMethod) {
+      jsonResult["ok"] = true;
+      return jsonResult;
+    } else {
+      return jsonResult;
+    }
+  }
 }
